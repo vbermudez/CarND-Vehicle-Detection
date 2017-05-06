@@ -1,0 +1,6 @@
+**/.DS_Store
+**/__pychache__
+vehicles/
+non-vehicles/
+*.pkl
+**/*.pyc
