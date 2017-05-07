@@ -54,19 +54,19 @@ class Processor(object):
         result = self.lines.find_lines(warped, img, False)
         return result
 
-    def find_cars(self, img):
+    def find_cars(self, img, name):
         """
             Fins the cars.
         """
         return self.finder.find_cars(img, YSTART, YSTOP, SCALE, self.svc, self.X_scaler, \
-            ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, HIST_RANGE)
+            ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, HIST_RANGE, name)
 
-    def process(self, img):
+    def process(self, img, name=None):
         """
             Processes an image.
         """
         # lane = self.find_lane(img)
-        result = self.find_cars(img) # lane
+        result = self.find_cars(img, name) # lane
         return result
 
 def train_pipeline(feat):
@@ -119,7 +119,7 @@ def test_pipeline():
         base_path, name = os.path.split(img_name)
         print('Processing ' + name + '...')
         img = utils.read_image(img_name)
-        result = proc.process(img)
+        result = proc.process(img, name)
         utils.write_image(result, os.path.join(out_path, 'result_' + name))
 
 if __name__ == "__main__":

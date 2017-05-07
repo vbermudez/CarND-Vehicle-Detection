@@ -44,7 +44,7 @@ def plot_histogram(img, histogram, name, output='./output_images'):
     plt.savefig(os.path.join(output, name), bbox_inches='tight')
     plt.close(f)
 
-def write_two_img(imgs, titles, name, output='./output_images'):
+def write_two_img(imgs, titles, name, output='./output_images', cmap1=None, cmap2=None):
     """
         Writes two images in a single plot.
 
@@ -56,11 +56,15 @@ def write_two_img(imgs, titles, name, output='./output_images'):
     """
     f, (ax1, ax2) = plt.subplots(1, 2, figsize=(24, 9))
     f.tight_layout()
-    if is_grayscaled(imgs[0]):
+    if cmap1 is not None:
+        ax1.imshow(imgs[0], cmap=cmap1)
+    elif is_grayscaled(imgs[0]):
         ax1.imshow(imgs[0], cmap='gray')
     else:
         ax1.imshow(imgs[0])
-    if is_grayscaled(imgs[1]):
+    if cmap2 is not None:
+        ax2.imshow(imgs[1], cmap=cmap2)
+    elif is_grayscaled(imgs[1]):
         ax2.imshow(imgs[1], cmap='gray')
     else:
         ax2.imshow(imgs[1])

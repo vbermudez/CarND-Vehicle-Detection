@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+from scipy.ndimage.measurements import label
 
 from VehicleDetection.features import FeatureExtractor
 import VehicleDetection.utils as cutils
@@ -64,21 +65,28 @@ class CarFinder(object):
                 on_windows.append(window)
         return on_windows
 
-    def find_cars(self, img, ystart, ystop, scale, svc, X_scaler, orient, \
-        pix_per_cell, cell_per_block, spatial_size, hist_bins, hist_range):
+    def find_cars(self, image, ystart, ystop, scale, svc, X_scaler, orient, \
+        pix_per_cell, cell_per_block, spatial_size, hist_bins, hist_range, name=None):
         """
             Finds cars into an image
         """
-        draw_img = np.copy(img)
-        img = img.astype(np.float32) / 255
+        samples = name is not None
+        img = image.astype(np.float32) / 255
         img_tosearch = img[ystart:ystop, :, :]
-        # cutils.write_two_img([img, img_tosearch], ['Original', 'Search Area RGB'], 'search_area_rgb.jpg')
+        if samples:
+            cutils.write_two_img([img, img_tosearch], ['Original', 'Search Area RGB'], \
+                'search_area_rgb_' + name)
         ctrans_tosearch = cutils.convert_color(img_tosearch, conv='RGB2YCrCb')
-        # cutils.write_two_img([img, ctrans_tosearch], ['Original', 'Search Area YCrCb'], 'search_area_ycrcb.jpg')
+        if samples:
+            cutils.write_two_img([img, ctrans_tosearch], ['Original', 'Search Area YCrCb'], \
+                'search_area_ycrcb_' + name)
         if scale != 1:
             imshape = ctrans_tosearch.shape
             ctrans_tosearch = cv2.resize(ctrans_tosearch, \
                 (np.int(imshape[1] / scale), np.int(imshape[0] / scale)))
+            if samples:
+                cutils.write_two_img([img, ctrans_tosearch], ['Original', 'Scaled'], \
+                    'scaled_' + name)
         ch1 = ctrans_tosearch[:, :, 0]
         ch2 = ctrans_tosearch[:, :, 1]
         ch3 = ctrans_tosearch[:, :, 2]
@@ -93,12 +101,20 @@ class CarFinder(object):
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
         nysteps = (nyblocks - nblocks_per_window) // cells_per_step
         # Compute individual channel HOG features for the entire image
-        hog1 = self.feat.get_hog_features(ch1, orient, pix_per_cell, \
-            cell_per_block, feature_vec=False)
-        hog2 = self.feat.get_hog_features(ch2, orient, pix_per_cell, \
-            cell_per_block, feature_vec=False)
-        hog3 = self.feat.get_hog_features(ch3, orient, pix_per_cell, \
-            cell_per_block, feature_vec=False)
+        hog1, hog1_img = self.feat.get_hog_features(ch1, orient, pix_per_cell, \
+            cell_per_block, vis=True, feature_vec=False)
+        hog2, hog2_img = self.feat.get_hog_features(ch2, orient, pix_per_cell, \
+            cell_per_block, vis=True, feature_vec=False)
+        hog3, hog3_img = self.feat.get_hog_features(ch3, orient, pix_per_cell, \
+            cell_per_block, vis=True, feature_vec=False)
+        if samples:
+            cutils.write_two_img([ctrans_tosearch, hog1_img], \
+                ['Search Area YCrCb', 'HOG (red channel)'], 'red_hog_' + name)
+            cutils.write_two_img([ctrans_tosearch, hog2_img], \
+                ['Search Area YCrCb', 'HOG (green channel)'], 'green_hog_' + name)
+            cutils.write_two_img([ctrans_tosearch, hog3_img], \
+                ['Search Area YCrCb', 'HOG (blue channel)'], 'blue_hog_' + name)
+        bboxes = []
         for xb in range(nxsteps):
             for yb in range(nysteps):
                 ypos = yb*cells_per_step
@@ -116,8 +132,10 @@ class CarFinder(object):
                 spatial_features = self.feat.bin_spatial(subimg, spatial_size)
                 hist_features = cutils.color_hist(subimg, hist_bins, hist_range)
                 # Scale features and make a prediction
-                all_features = np.hstack((spatial_features, hist_features, hog_features))
-                test_features = X_scaler.transform(all_features.reshape(1, -1))
+                all_features = np.hstack((spatial_features, hist_features, \
+                    hog_features)).reshape(1, -1)
+                # print('Shapes:', spatial_features.shape, hist_features.shape, hog_features.shape, all_features.shape)
+                test_features = X_scaler.transform(all_features)
                 #test_features = \
                 #   X_scaler.transform(np.hstack((shape_feat, hist_feat)).reshape(1, -1))
                 test_prediction = svc.predict(test_features)
@@ -125,7 +143,26 @@ class CarFinder(object):
                     xbox_left = np.int(xleft*scale)
                     ytop_draw = np.int(ytop*scale)
                     win_draw = np.int(window*scale)
-                    cv2.rectangle(draw_img, (xbox_left, ytop_draw + ystart), \
-                        (xbox_left + win_draw, ytop_draw + win_draw + ystart), (0, 0, 255), 6)
+                    if samples:
+                        pred_img = np.copy(img)
+                        cv2.rectangle(pred_img, (xbox_left, ytop_draw + ystart), \
+                            (xbox_left + win_draw, ytop_draw + win_draw + ystart), (0, 0, 255), 6)
+                        cutils.write_two_img([img, pred_img], ['Original', 'Prediction'], \
+                            'blue_hog_' + name)
+                    bboxes.append(((xbox_left, ytop_draw + ystart), \
+                        (xbox_left + win_draw, ytop_draw + win_draw + ystart)))
+        # return draw_img
+        # return bboxes
+        heat = np.zeros_like(img[:, :, 0]).astype(np.float)
+        heat = cutils.add_heat(heat, bboxes)
+        heat = cutils.apply_threshold(heat, 1)
+        heatmap = np.clip(heat, 0, 255)
+        if samples:
+            cutils.write_two_img([img, heatmap], ['Original', 'Heatmap'], 'heatmap_' + name, cmap2='heat')
+        labels = label(heatmap)
+        if samples:
+            cutils.write_two_img([img, labels], ['Original', 'Labels'], 'labels_' + name, cmap2='gray')
+        draw_img = np.copy(img)
+        draw_img = cutils.draw_labeled_bboxes(draw_img, labels)
         return draw_img
         

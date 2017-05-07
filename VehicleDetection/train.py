@@ -31,11 +31,10 @@ class SVCTrainer(object):
         """
             Fits a StandardScaler.
         """
-
+        X = np.vstack((cars_feats, notcars_feats)).astype(np.float64)
         if os.path.isfile('./xscaler.pkl'):
             X_scaler = cutils.load_scaler()
         else:
-            X = np.vstack((cars_feats, notcars_feats)).astype(np.float64)
             X_scaler = StandardScaler().fit(X)
             cutils.save_scaler(X_scaler)
         scaled_X = X_scaler.transform(X)
