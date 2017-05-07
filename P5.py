@@ -15,7 +15,7 @@ import VehicleDetection.utils as cutils
 #  GLOBAL VARIABLES!
 YSTART = 400
 YSTOP = 656
-SCALE = 1.5
+SCALE = 1
 COLOR_SPACE = 'RGB'
 SPATIAL_SIZE = (32, 32)
 ORIENT = 9
@@ -23,7 +23,8 @@ PIX_PER_CELL = 8
 CELL_PER_BLOCK = 2
 HIST_BINS = 32
 HIST_RANGE = (0, 256)
-HOG_CHANNEL = 0
+HOG_CHANNEL = 'ALL'
+WINDOW = 64
 
 class Processor(object):
     """
@@ -59,7 +60,8 @@ class Processor(object):
             Fins the cars.
         """
         return self.finder.find_cars(img, YSTART, YSTOP, SCALE, self.svc, self.X_scaler, \
-            ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, HIST_RANGE, name)
+            ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, \
+            HIST_RANGE, WINDOW, name)
 
     def process(self, img, name=None):
         """

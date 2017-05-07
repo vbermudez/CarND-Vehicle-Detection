@@ -66,7 +66,8 @@ class CarFinder(object):
         return on_windows
 
     def find_cars(self, image, ystart, ystop, scale, svc, X_scaler, orient, \
-        pix_per_cell, cell_per_block, spatial_size, hist_bins, hist_range, name=None):
+        pix_per_cell, cell_per_block, spatial_size, hist_bins, \
+        hist_range, window=64, name=None):
         """
             Finds cars into an image
         """
@@ -95,7 +96,7 @@ class CarFinder(object):
         nyblocks = (ch1.shape[0] // pix_per_cell) - cell_per_block + 1
         nfeat_per_block = orient * cell_per_block**2
         # 64 was the orginal sampling rate, with 8 cells and 8 pix per cell
-        window = 64
+        # window = 64
         nblocks_per_window = (window // pix_per_cell) - cell_per_block + 1
         cells_per_step = 2  # Instead of overlap, define how many cells to step
         nxsteps = (nxblocks - nblocks_per_window) // cells_per_step
@@ -158,7 +159,7 @@ class CarFinder(object):
         heat = cutils.apply_threshold(heat, 1)
         heatmap = np.clip(heat, 0, 255)
         if samples:
-            cutils.write_two_img([img, heatmap], ['Original', 'Heatmap'], 'heatmap_' + name, cmap2='heat')
+            cutils.write_two_img([img, heatmap], ['Original', 'Heatmap'], 'heatmap_' + name, cmap2='hot')
         labels = label(heatmap)
         if samples:
             cutils.write_two_img([img, labels], ['Original', 'Labels'], 'labels_' + name, cmap2='gray')
