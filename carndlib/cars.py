@@ -191,7 +191,7 @@ class CarFinder(object):
         """
         overlay = img.copy()
         for bbox in self.boxes_finded:
-            cv2.rectangle(overlay, bbox[0], bbox[1], color, -1, cv2.CV_AA)
+            cv2.rectangle(overlay, bbox[0], bbox[1], color, -1, lineType=cv2.LINE_AA)
         cv2.addWeighted(overlay, alpha, img, 1- alpha, 0, img)
         text = "Cars finded {}".format(self.num_cars)
         cv2.putText(img, text, (10, 140), cv2.FONT_HERSHEY_SIMPLEX, 1, (0, 0, 0), 2)
