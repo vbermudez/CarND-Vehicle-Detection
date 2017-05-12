@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import os
 from scipy.signal import find_peaks_cwt
 
-import AdvLaneFinding.utils as utils
+import carndlib.utils as utils
 
 class LineFinder(object):
     """

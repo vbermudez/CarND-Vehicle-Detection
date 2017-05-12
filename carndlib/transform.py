@@ -1,7 +1,7 @@
 import cv2
 import numpy as np
 
-import AdvLaneFinding.utils as utils
+import carndlib.utils as utils
 
 class Transformer(object):
     """

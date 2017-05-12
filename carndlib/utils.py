@@ -1,13 +1,13 @@
 """
     Utility functions module
 """
-
 import cv2
-import matplotlib.pyplot as plt
-import matplotlib.image as mpimg
-import os
-import glob
 import numpy as np
+from sklearn.externals import joblib
+import matplotlib.image as mpimg
+import matplotlib.pyplot as plt
+import glob
+import os
 
 def grayscale(img):
     """
@@ -201,3 +201,42 @@ def list_dir(path):
         Lists all the files in a directory.
     """
     return glob.glob(os.path.join(path, '*'))
+
+def to_color_space(img, color_space):
+    """
+        Transform from RGB to the specified color space.
+    """
+    if color_space != 'RGB':
+        if color_space == 'HSV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HSV)
+        elif color_space == 'LUV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2LUV)
+        elif color_space == 'HLS':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2HLS)
+        elif color_space == 'YUV':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YUV)
+        elif color_space == 'YCrCb':
+            feature_image = cv2.cvtColor(img, cv2.COLOR_RGB2YCrCb)
+    else: feature_image = np.copy(img)
+    return feature_image
+
+def save(data, file_name='./model.pkl'):
+    """
+        Saves to filesystem.
+    """
+    joblib.dump(data, file_name)
+
+def load(file_name='./model.pkl'):
+    """
+        Loads from filesystem.
+    """
+    return joblib.load(file_name)
+
+def file_exists(file_name):
+    """
+        Returns True if file exists.
+    """
+    return os.path.isfile(file_name)
+
+
+

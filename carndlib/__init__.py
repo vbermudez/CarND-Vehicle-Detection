@@ -3,4 +3,4 @@
     modules to perform all the tasks involved in the
     project
 """
-__all__ = ['utils', 'features', 'cars', 'train']
+__all__ = ['utils', 'camera', 'transform', 'threshold', 'lines', 'features', 'cars', 'train']

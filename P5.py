@@ -2,21 +2,22 @@ import os
 import numpy as np
 from moviepy.editor import VideoFileClip
 
-from AdvLaneFinding.camera import Calibrator
-from AdvLaneFinding.transform import Transformer
-from AdvLaneFinding.threshold import Thresholder
-from AdvLaneFinding.lines import LineFinder
-import AdvLaneFinding.utils as utils
-from VehicleDetection.features import FeatureExtractor
-from VehicleDetection.cars import CarFinder
-from VehicleDetection.train import SVCTrainer
-import VehicleDetection.utils as cutils
+from carndlib.camera import Calibrator
+from carndlib.transform import Transformer
+from carndlib.threshold import Thresholder
+from carndlib.lines import LineFinder
+
+from carndlib.cars import CarFinder
+from carndlib.train import SVMTrainer
+
+
+import carndlib.utils as utils
 
 #  GLOBAL VARIABLES!
 YSTART = 400
 YSTOP = 656
-SCALE = 1
-COLOR_SPACE = 'RGB'
+SCALES = [1, 1.5, 2.0]
+COLOR_SPACE = 'YCrCb'
 SPATIAL_SIZE = (32, 32)
 ORIENT = 9
 PIX_PER_CELL = 8
@@ -24,23 +25,21 @@ CELL_PER_BLOCK = 2
 HIST_BINS = 32
 HIST_RANGE = (0, 256)
 HOG_CHANNEL = 'ALL'
-WINDOW = 64
 
 class Processor(object):
     """
         Image processor utility.
     """
-    def __init__(self, thresh, trans, lines, feat, finder, svc, X_scaler):
+    def __init__(self, trans, lines, svc, scaler):
         """
             Returns an image processor utility.
         """
-        self.thresh = thresh
+        self.thresh = Thresholder()
         self.trans = trans
         self.lines = lines
-        self.feat = feat
-        self.finder = finder
+        self.finder = CarFinder()
         self.svc = svc
-        self.X_scaler = X_scaler
+        self.scaler = scaler
 
     def find_lane(self, img):
         """
@@ -59,9 +58,12 @@ class Processor(object):
         """
             Fins the cars.
         """
-        return self.finder.find_cars(img, YSTART, YSTOP, SCALE, self.svc, self.X_scaler, \
-            ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, \
-            HIST_RANGE, WINDOW, name)
+        result = self.finder.find_cars(img, COLOR_SPACE, YSTART, YSTOP, SCALES, self.svc, \
+            self.scaler, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, \
+            False)
+        if name is not None:
+            utils.write_image(result, name)
+        return self.finder.draw_detections(img)
 
     def process(self, img, name=None):
         """
@@ -71,32 +73,19 @@ class Processor(object):
         result = self.find_cars(img, name) # lane
         return result
 
-def train_pipeline(feat):
-    """
-        Trains a the SVC.
-    """
-    trainer = SVCTrainer()
-    cars, notcars = cutils.load_images()
-    cars_feats, notcars_feats = feat.img_features(cars, notcars, COLOR_SPACE, SPATIAL_SIZE, \
-        HIST_BINS, HIST_RANGE, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, HOG_CHANNEL, True, True, True)
-    X_scaler, scaled_X = trainer.get_scaler(cars_feats, notcars_feats)
-    X_train, X_test, y_train, y_test = trainer.split_sets(cars_feats, notcars_feats, scaled_X)
-    svc = trainer.train_svc(X_train, y_train, X_test, y_test, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK)
-    return svc, X_scaler
-
 def pipeline():
     """
         Detects the lines on video imput.
     """
-    cal = Calibrator()
-    ret, mtx, dist, rvecs, tvecs = cal.calibrate()
-    trans = Transformer(mtx, dist)
-    thresh = Thresholder()
-    lines = LineFinder(trans)
-    feat = FeatureExtractor()
-    finder = CarFinder(feat)
-    svc, X_scaler = train_pipeline(feat)
-    proc = Processor(thresh, trans, lines, feat, finder, svc, X_scaler)
+    # cal = Calibrator()
+    # ret, mtx, dist, rvecs, tvecs = cal.calibrate()
+    # trans = Transformer(mtx, dist)
+    # lines = LineFinder(trans)
+    trans = None
+    lines = None
+    trainer = SVMTrainer(color_space=COLOR_SPACE)
+    svc, scaler = trainer.train()
+    proc = Processor(trans, lines, svc, scaler)
     video = VideoFileClip('./project_video.mp4')
     output = video.fl_image(proc.process)
     output.write_videofile('./output.mp4', audio=False)
@@ -108,23 +97,20 @@ def test_pipeline():
     # cal = Calibrator()
     # ret, mtx, dist, rvecs, tvecs = cal.calibrate()
     # trans = Transformer(mtx, dist)
-    # thresh = Thresholder()
     # lines = LineFinder(trans)
-    feat = FeatureExtractor()
-    finder = CarFinder(feat)
-    svc, X_scaler = train_pipeline(feat)
-    proc = Processor(None, None, None, feat, finder, svc, X_scaler)
-    # proc = Processor(thresh, trans, lines, feat, finder, svc, X_scaler)
+    trainer = SVMTrainer(color_space=COLOR_SPACE)
+    svc, scaler = trainer.train()
+    proc = Processor(None, None, svc, scaler)
     path = './test_images'
     out_path = './output_images'
     for img_name in utils.list_dir(path):
         base_path, name = os.path.split(img_name)
         print('Processing ' + name + '...')
         img = utils.read_image(img_name)
-        result = proc.process(img, name)
+        result = proc.process(img, os.path.join(out_path, 'mix_' + name))
         utils.write_image(result, os.path.join(out_path, 'result_' + name))
 
 if __name__ == "__main__":
-    test_pipeline()
-    # pipeline()
+    # test_pipeline()
+    pipeline()
 
