@@ -10,7 +10,6 @@ from carndlib.lines import LineFinder
 from carndlib.cars import CarFinder
 from carndlib.train import SVMTrainer
 
-
 import carndlib.utils as utils
 
 #  GLOBAL VARIABLES!
@@ -108,7 +107,63 @@ def test_pipeline():
         result = proc.process(img, os.path.join(out_path, 'mix_' + name))
         utils.write_image(result, os.path.join(out_path, 'result_' + name))
 
+def samples_pipeline():
+    """
+        Generate sample for writeup
+    """
+    from scipy.ndimage.measurements import label
+    from carndlib.features import Features
+    feats = Features()
+    print('Sampling features...')
+    for img_name in utils.list_dir('./features'):
+        base_path, name = os.path.split(img_name)
+        print('Sampling ' + name + '...')
+        image = utils.read_image(img_name)
+        if name.startswith('car'):
+            title = 'Car'
+        else:
+            title = 'Not car'
+        utils.plot_one_image(image, title, name)
+        ch1 = image[:, :, 0]
+        ch2 = image[:, :, 1]
+        ch3 = image[:, :, 2]
+        hog, output = feats.get_hog(ch1, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, vis=True)
+        utils.write_two_img([ch1, output], ['Original CH-1', 'HOG CH-1'], 'hog1_' + name)
+        hog, output = feats.get_hog(ch2, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, vis=True)
+        utils.write_two_img([ch2, output], ['Original CH-2', 'HOG CH-2'], 'hog2_' + name)
+        hog, output = feats.get_hog(ch3, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, vis=True)
+        utils.write_two_img([ch3, output], ['Original CH-3', 'HOG CH-3'], 'hog3_' + name)
+        output = feats.bin_spatial(image, size=SPATIAL_SIZE)
+        utils.plot_histogram(image, output, 'spatial_' + name, title='Color bin')
+        output = feats.color_hist(image, nbins=HIST_BINS)
+        utils.plot_histogram(image, output, 'histogram_'+ name)
+    finder = CarFinder()
+    svc = utils.load('./' + COLOR_SPACE + '_model.pkl')
+    scaler = utils.load('./' + COLOR_SPACE + '_scaler.pkl')
+    print('Samplig process...')
+    for img_name in utils.list_dir('./test_images'):
+        base_path, name = os.path.split(img_name)
+        print('Sampling ' + name + '...')
+        image = utils.read_image(img_name)
+        for scale in SCALES:
+            output, bboxes = finder.scan_image(image, COLOR_SPACE, YSTART, \
+                YSTOP, 0, image.shape[1], scale, svc, scaler, ORIENT, \
+                PIX_PER_CELL, CELL_PER_BLOCK, SPATIAL_SIZE, HIST_BINS, vis=True)
+            utils.plot_one_image(output, 'Sliding Window, scale: {}'.format(scale), \
+                'sliding_win_' + str(scale) + name)
+        output, out_imgs, bboxes = finder.find_bboxes(image, COLOR_SPACE, YSTART, \
+            YSTOP, SCALES, svc, scaler, ORIENT, PIX_PER_CELL, CELL_PER_BLOCK, \
+            SPATIAL_SIZE, HIST_BINS, vis=True)
+        utils.plot_one_image(output, 'Detections', 'detections_' + '_' + name)
+        heatmap = finder.heatmap(image, bboxes)
+        utils.plot_one_image(heatmap, 'Heatmap', 'heatmap_' + name, cmap='hot')
+        labels = label(heatmap)
+        output = finder.draw_labeled_boxes(np.copy(image), labels)
+        utils.plot_one_image(output, 'Contour', 'contour_' + name)
+        output = finder.draw_detections(image)
+        utils.plot_one_image(output, 'Final', 'result_' + name)
 if __name__ == "__main__":
     # test_pipeline()
     pipeline()
+    # samples_pipeline()
 

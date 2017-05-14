@@ -147,7 +147,7 @@ def plot_points(img, one, two, three, four, name, output='./output_images'):
     plt.savefig(os.path.join(output, name), bbox_inches='tight')
     plt.close('all')
 
-def plot_histogram(img, histogram, name, output='./output_images'):
+def plot_histogram(img, histogram, name, output='./output_images', title='Histogram'):
     """
         Plots the histogram over the image.
     """
@@ -159,7 +159,7 @@ def plot_histogram(img, histogram, name, output='./output_images'):
     else:
         ax1.imshow(img)
     ax2.plot(histogram)
-    ax2.set_title('Histogram', fontsize=50)
+    ax2.set_title(title, fontsize=50)
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
     plt.savefig(os.path.join(output, name), bbox_inches='tight')
     plt.close(f)
@@ -189,6 +189,20 @@ def write_two_img(imgs, titles, name, output='./output_images'):
     plt.subplots_adjust(left=0., right=1, top=0.9, bottom=0.)
     plt.savefig(os.path.join(output, name), bbox_inches='tight')
     plt.close(f)
+
+def plot_one_image(img, title, name, output='./output_images', cmap=None):
+    """
+        Write a single image on a plot.
+    """
+    if cmap is not None:
+        plt.imshow(img, cmap=cmap)
+    elif is_grayscaled(img):
+        plt.imshow(img, cmap='gray')
+    else:
+        plt.imshow(img)
+    plt.title(title, fontsize=50)
+    plt.savefig(os.path.join(output, name), bbox_inches='tight')
+    plt.close('all')
 
 def read_image(path):
     """
