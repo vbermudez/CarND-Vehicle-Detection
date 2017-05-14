@@ -69,20 +69,18 @@ class Processor(object):
         """
             Processes an image.
         """
-        # lane = self.find_lane(img)
-        result = self.find_cars(img, name) # lane
+        result = self.find_cars(img, name)
+        result = self.find_lane(result)
         return result
 
 def pipeline():
     """
         Detects the lines on video imput.
     """
-    # cal = Calibrator()
-    # ret, mtx, dist, rvecs, tvecs = cal.calibrate()
-    # trans = Transformer(mtx, dist)
-    # lines = LineFinder(trans)
-    trans = None
-    lines = None
+    cal = Calibrator()
+    ret, mtx, dist, rvecs, tvecs = cal.calibrate()
+    trans = Transformer(mtx, dist)
+    lines = LineFinder(trans)
     trainer = SVMTrainer(color_space=COLOR_SPACE)
     svc, scaler = trainer.train()
     proc = Processor(trans, lines, svc, scaler)
